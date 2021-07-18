@@ -10,7 +10,7 @@ set -e
 SRC=$(readlink -f $(dirname $0))
 cd ${SRC}
 
-autoreconf -i
+autoreconf -i --force
 
 TMP=$(mktemp -d)
 
