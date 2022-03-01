@@ -63,7 +63,7 @@ typedef enum {
 	EL_READ_SIZE_BYTE_08,
 	EL_READ_SIZE_BYTE_00,
 	EL_SKIP_BYTES,
-	EL_EXIF_FOUND,
+	EL_EXIF_FOUND
 } ExifLoaderState;
 
 typedef enum {
@@ -164,6 +164,7 @@ exif_loader_write (ExifLoader *eld, unsigned char *buf, unsigned int len)
 {
 	unsigned int i;
 
+begin:
 	if (!eld || (len && !buf)) 
 		return 0;
 
@@ -235,7 +236,7 @@ exif_loader_write (ExifLoader *eld, unsigned char *buf, unsigned int len)
 		break;
 	}
 
-	for (i = 0; i < sizeof (eld->b); i++)
+	for (i = 0; i < sizeof (eld->b); i++) {
 		switch (eld->state) {
 		case EL_EXIF_FOUND:
 			if (!exif_loader_copy (eld, eld->b + i,
@@ -243,9 +244,19 @@ exif_loader_write (ExifLoader *eld, unsigned char *buf, unsigned int len)
 				return 0;
 			return exif_loader_copy (eld, buf, len);
 		case EL_SKIP_BYTES:
-			eld->size--;
-			if (!eld->size) 
-				eld->state = EL_READ;
+			switch (eld->size) {
+                            case 0:
+			        eld->state = EL_READ;
+				i--;   /* reprocess this byte */
+				break;
+                            case 1:
+                                eld->size = 0;
+			        eld->state = EL_READ;
+				break;
+                            default:
+                                eld->size--;
+				break;
+			}
 			break;
 
 		case EL_READ_SIZE_BYTE_24:
@@ -265,12 +276,20 @@ exif_loader_write (ExifLoader *eld, unsigned char *buf, unsigned int len)
 			switch (eld->data_format) {
 			case EL_DATA_FORMAT_JPEG:
 				eld->state = EL_SKIP_BYTES;
-				eld->size -= 2;
+				if (eld->size < 2) {
+				    /* Actually it's malformed... */
+				    eld->size = 0;
+				} else
+				    eld->size -= 2;
 				break;
 			case EL_DATA_FORMAT_FUJI_RAW:
 				eld->data_format = EL_DATA_FORMAT_EXIF;
 				eld->state = EL_SKIP_BYTES;
-				eld->size -= 86;
+				if (eld->size < 86) {
+				    /* Actually it's malformed... */
+				    eld->size = 0;
+				} else
+				    eld->size -= 86;	/* and put this in an else */
 				break;
 			case EL_DATA_FORMAT_EXIF:
 				eld->state = EL_EXIF_FOUND;
@@ -319,13 +338,14 @@ exif_loader_write (ExifLoader *eld, unsigned char *buf, unsigned int len)
 				return 0;
 			}
 		}
+	}
 
 	/*
 	 * If we reach this point, the buffer has not been big enough
 	 * to read all data we need. Fill it with new data.
 	 */
 	eld->b_len = 0;
-	return exif_loader_write (eld, buf, len);
+	goto begin;
 }
 
 ExifLoader *
