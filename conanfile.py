@@ -45,6 +45,7 @@ class LibexifConan(ConanFile):
             "--disable-nls"
         ]
         return args
-
-
+        
+    def configure_env(self, at):
+        at.flags.append("-fexceptions")
 
