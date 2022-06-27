@@ -23,18 +23,10 @@ class LibexifConan(ConanFile):
         "shared": True,
         "fPIC": True,
     }
-    _ndk_dep = "android-ndk/[]"
     
     exports_sources = "*", "!autom4te.cache"
     python_requires = "wdyConanHelper/[]"
     python_requires_extend = "wdyConanHelper.ConanAutotools"
-
-    def configure(self):
-        if self.options.shared:
-            del self.options.fPIC
-        del self.settings.compiler.libcxx
-        del self.settings.compiler.cppstd
-
 
     def configure_args(self):
         yes_no = lambda v: "yes" if v else "no"
@@ -45,7 +37,4 @@ class LibexifConan(ConanFile):
             "--disable-nls"
         ]
         return args
-        
-    def configure_env(self, at):
-        at.flags.append("-fexceptions")
 
