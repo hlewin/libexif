@@ -2,6 +2,7 @@ from conans import ConanFile, AutoToolsBuildEnvironment, tools
 from conans.errors import ConanInvalidConfiguration
 import os
 from conan.tools.files import replace_in_file
+from conan.tools.gnu import AutotoolsToolchain
 
 required_conan_version = ">=1.33.0"
 
@@ -23,18 +24,16 @@ class LibexifConan(ConanFile):
         "shared": True,
         "fPIC": True,
     }
-    
+
     exports_sources = "*", "!autom4te.cache"
     python_requires = "wdyConanHelper/[]"
     python_requires_extend = "wdyConanHelper.ConanAutotools"
 
-    def configure_args(self):
+    def configure_autotools(self, tc: AutotoolsToolchain):
         yes_no = lambda v: "yes" if v else "no"
-        args = [
+        tc.configure_args += [
             "--enable-shared={}".format(yes_no(self.options.shared)),
             "--enable-static={}".format(yes_no(not self.options.shared)),
             "--disable-largefile",
-            "--disable-nls"
+            "--disable-nls",
         ]
-        return args
-
